@@ -8,7 +8,7 @@ import space.gavinklfong.demo.streamapi.repos.CustomerRepo;
 import space.gavinklfong.demo.streamapi.repos.OrderRepo;
 import space.gavinklfong.demo.streamapi.repos.ProductRepo;
 
-import javax.transaction.Transactional;
+import jakarta.transaction.Transactional;
 
 @Slf4j
 @Component

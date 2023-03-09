@@ -209,7 +209,7 @@ public class StreamApiTest {
 
 		long endTime = System.currentTimeMillis();
 		log.info(String.format("exercise 8 - execution time: %1$d ms", (endTime - startTime)));
-		log.info("Total lump sum = " + result);
+		System.out.print("Total lump sum = " + result);
 	}
 
 	@Test
