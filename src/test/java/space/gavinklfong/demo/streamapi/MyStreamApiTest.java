@@ -9,11 +9,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -164,60 +166,71 @@ public class MyStreamApiTest {
 	@Test
 	@DisplayName("Obtain a mapping of order id and the order's product count")
 	public void exercise11() {
-		Map<Long, Integer> sum = orderRepo.findAll().stream()
-				.collect(Collectors.toMap(Order::getId, order -> order.getProducts().size()));
+		Map<Long, Long> sum = orderRepo.findAll().stream()
+				.collect(Collectors.groupingBy(Order::getId, Collectors.summingLong(p -> p.getProducts().size())));
+		System.out.println(sum.get(3l));
+	}
+
+	@Test
+	@DisplayName("Obtain a mapping of order id and the order's products")
+	public void exercise11a() {
+		Map<Long, List<Product>> map = orderRepo.findAll().stream().collect(Collectors.groupingBy(Order::getId,
+				Collectors.flatMapping(t -> t.getProducts().stream(), Collectors.toList())));
+		System.out.println(map.get(1l));
 	}
 
 	@Test
 	@DisplayName("Obtain a data map of customer and list of orders")
 	public void exercise12() {
-		Map<Customer, List<Order>> sum = orderRepo.findAll().stream()
-				.collect(Collectors.groupingBy(Order::getCustomer));
+		Map<Customer, List<Order>> map = orderRepo.findAll().stream()
+				.collect(Collectors.groupingBy(Order::getCustomer, Collectors.toList()));
 	}
 
 	@Test
 	@DisplayName("Obtain a data map of customer_id and list of order_id(s)")
 	public void exercise12a() {
-		Map<Long, List<Long>> sum = orderRepo.findAll().stream().collect(Collectors.groupingBy(
-				o -> o.getCustomer().getId(), Collectors.mapping(Order::getId, Collectors.toList())));
+		Map<Long, List<Long>> map = orderRepo.findAll().stream().collect(Collectors
+				.groupingBy(o -> o.getCustomer().getId(), Collectors.mapping(Order::getId, Collectors.toList())));
+
 	}
 
 	@Test
 	@DisplayName("Obtain a data map with order and its total price")
 	public void exercise13() {
-		Map<Order, Double> sum = orderRepo.findAll().stream()
-				.collect(Collectors.groupingBy(Function.identity(), 
-						Collectors.summingDouble(k -> k.getProducts().stream().mapToDouble(y -> y.getPrice()).sum())));
+		Map<Order, Double> map = orderRepo.findAll().stream().collect(Collectors.toMap(Function.identity(),
+				o -> o.getProducts().stream().mapToDouble(Product::getPrice).sum()));
 	}
 
 	@Test
 	@DisplayName("Obtain a data map with order and its total price (using reduce)")
 	public void exercise13a() {
-		Map<Order, Double> sum = orderRepo.findAll().stream().collect(Collectors.toMap(Function.identity(),
-				t -> t.getProducts().stream().reduce(0d, (acc, pro) -> acc + pro.getPrice(), Double::sum)));
+		Map<Order, Double> map = orderRepo.findAll().stream()
+				.collect(Collectors.toMap(Function.identity(), p -> p.getProducts().stream().reduce(Double.valueOf(0d),
+						(a, x) -> a = Double.sum(a, x.getPrice()), Double::sum)));
 	}
 
 	@Test
 	@DisplayName("Obtain a data map of product name by category")
 	public void exercise14() {
-		Map<String, List<String>> map = productRepo.findAll().stream().collect(Collectors.groupingBy(
-				p -> p.getCategory(), HashMap::new, Collectors.mapping(pr -> pr.getName(), Collectors.toList())));
+		Map<String, List<String>> map = productRepo.findAll().stream().collect(
+				Collectors.groupingBy(Product::getCategory, Collectors.mapping(Product::getName, Collectors.toList())));
 	}
 
 	@Test
 	@DisplayName("Get the most expensive product per category")
 	void exercise15() {
-		Map<String, Product> map = productRepo.findAll().stream().collect(Collectors.toMap(Product::getCategory,
-				Function.identity(), BinaryOperator.maxBy(Comparator.comparing(Product::getPrice))));
+		BinaryOperator<Product> maxBy = BinaryOperator.maxBy(Comparator.comparing(Product::getPrice));
+		Map<String, Product> map = productRepo.findAll().stream()
+				.collect(Collectors.toMap(Product::getCategory, Function.identity(), maxBy));
 	}
 
 	@Test
 	@DisplayName("Get the most expensive product (by name) per category")
 	void exercise15a() {
+		BinaryOperator<Product> maxBy = BinaryOperator.maxBy(Comparator.comparing(Product::getPrice));
 		Map<String, String> map = productRepo.findAll().stream()
-				.collect(Collectors.groupingBy(Product::getCategory,
-						Collectors.collectingAndThen(Collectors.maxBy(Comparator.comparingDouble(Product::getPrice)),
-								p -> p.map(Product::getName).orElse(null))));
+				.collect(Collectors.groupingBy(Product::getCategory, Collectors.collectingAndThen(
+						Collectors.maxBy(Comparator.comparing(Product::getPrice)), p -> p.get().getName())));
 	}
 
 }
